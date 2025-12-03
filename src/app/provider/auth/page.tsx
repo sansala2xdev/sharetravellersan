@@ -39,7 +39,7 @@ export default function ProviderAuthPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/provider/onboarding`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/provider/onboarding`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',

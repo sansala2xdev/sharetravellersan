@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Clock, Users, ChevronDown } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import TourDetails from './TourDetails';
 import { createClient } from '@/lib/supabase/client';
@@ -30,10 +31,15 @@ interface AllServicesProps {
 
 const AllServices: React.FC<AllServicesProps> = ({ onBack }) => {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const cityParam = searchParams.get('city');
+  const searchParam = searchParams.get('search');
+  const categoryParam = searchParams.get('category');
   
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParam || '');
   const [selectedProvince, setSelectedProvince] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'all');
+  const [selectedCity, setSelectedCity] = useState(cityParam || 'all');
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +47,27 @@ const AllServices: React.FC<AllServicesProps> = ({ onBack }) => {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  // Update selectedCity when URL parameter changes
+  useEffect(() => {
+    if (cityParam) {
+      setSelectedCity(cityParam);
+    }
+  }, [cityParam]);
+
+  // Update search query when URL parameter changes
+  useEffect(() => {
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, [searchParam]);
+
+  // Update category when URL parameter changes
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [categoryParam]);
 
   const fetchServices = async () => {
     setLoading(true);
@@ -73,6 +100,13 @@ const AllServices: React.FC<AllServicesProps> = ({ onBack }) => {
         service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         service.city.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by city
+    if (selectedCity !== 'all') {
+      filtered = filtered.filter(service =>
+        service.city.toLowerCase() === selectedCity.toLowerCase()
       );
     }
 
@@ -123,6 +157,25 @@ const AllServices: React.FC<AllServicesProps> = ({ onBack }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-black"
             />
+          </div>
+          <div className="relative md:w-48">
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none text-black"
+            >
+              <option value="all">All Cities</option>
+              <option value="colombo">Colombo</option>
+              <option value="kandy">Kandy</option>
+              <option value="galle">Galle</option>
+              <option value="dambulla">Dambulla</option>
+              <option value="ella">Ella</option>
+              <option value="mirissa">Mirissa</option>
+              <option value="negombo">Negombo</option>
+              <option value="nuwara eliya">Nuwara Eliya</option>
+              <option value="trincomalee">Trincomalee</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
           <div className="relative md:w-48">
             <select

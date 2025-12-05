@@ -195,22 +195,6 @@ const UserHome: React.FC<UserHomeProps> = () => {
           </div>
         </div>
 
-        {/* User Interests Badge */}
-        {userInterests.length > 0 && (
-          <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
-            <p className="text-sm text-gray-700 mb-2">
-              <strong>Showing tours based on your interests:</strong>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {userInterests.map((interest) => (
-                <span key={interest} className="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
-                  {interest}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Loading State */}
         {loading ? (
           <div className="flex items-center justify-center py-12">

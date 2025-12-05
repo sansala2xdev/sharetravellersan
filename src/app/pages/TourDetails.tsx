@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Star, Clock, Users, Check, Calendar, ChevronDown, Minus, Plus, ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
+import { MapPin, Star, Clock, Users, Check, Calendar, ChevronDown, Minus, Plus, ArrowLeft, Image as ImageIcon, X, Heart, Share2 } from 'lucide-react';
 import Header from '@/components/Header';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 
 interface TourDetailsProps {
   tourId: string;
@@ -189,6 +190,7 @@ const tourData: any = {
 const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
   const supabase = createClient();
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [adults, setAdults] = useState(2);
@@ -200,6 +202,7 @@ const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingId, setBookingId] = useState('');
   const [isBooking, setIsBooking] = useState(false);
+  const [showBookingOptions, setShowBookingOptions] = useState(false);
 
   useEffect(() => {
     fetchService();
@@ -266,6 +269,37 @@ const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
     return total.toFixed(2);
   };
 
+  const handleAddToCart = () => {
+    if (!selectedDate) {
+      alert('Please select a date');
+      return;
+    }
+
+    if (!selectedTimeSlot) {
+      alert('Please select a time slot');
+      return;
+    }
+
+    if (!service) return;
+
+    const cartItem = {
+      id: `${service.id}-${Date.now()}`,
+      serviceId: service.id,
+      serviceTitle: service.title,
+      date: selectedDate,
+      timeSlot: selectedTimeSlot,
+      adults,
+      children,
+      adultPrice: service.adult_price,
+      childPrice: service.child_price || 0,
+      total: parseFloat(calculateTotal()),
+      image: service.images && service.images.length > 0 ? service.images[0] : undefined,
+    };
+
+    addToCart(cartItem);
+    alert('Added to cart successfully!');
+  };
+
   const handleBooking = async () => {
     if (!user) {
       alert('Please login to make a booking');
@@ -323,65 +357,346 @@ const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-2"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Back to tours</span>
           </button>
         )}
 
-        {/* Hero Image */}
-        <div className="mb-8">
-          {service.images && service.images.length > 0 ? (
-            <img 
-              src={service.images[0]} 
-              alt={service.title}
-              className="w-full h-96 object-cover rounded-lg"
-              onError={(e) => {
-                console.error('Image failed to load:', service.images[0]);
-                e.currentTarget.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80';
-              }}
-            />
-          ) : (
-            <div className="w-full h-96 bg-linear-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <ImageIcon className="w-16 h-16 text-orange-400 mx-auto mb-2" />
-                <p className="text-orange-600 font-medium">No image available</p>
+        {/* Title and Rating - Before Images */}
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{service.title}</h1>
+          
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-block px-3 py-1 bg-blue-900 text-white text-xs font-semibold rounded">
+                  Top rated
+                </span>
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-gray-900 text-gray-900" />
+                  ))}
+                  <span className="font-semibold text-gray-900 ml-1">4.9</span>
+                </div>
+                <a href="#reviews" className="text-gray-700 underline hover:text-gray-900">125 reviews</a>
               </div>
             </div>
-          )}
+
+            {/* Wishlist and Share buttons */}
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                <Heart className="w-5 h-5 text-gray-700" />
+                <span className="text-sm font-medium text-gray-900">Add to wishlist</span>
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                <Share2 className="w-5 h-5 text-gray-700" />
+                <span className="text-sm font-medium text-gray-900">Share</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-700">
+            <span>•</span>
+            <span>Activity provider: {service.provider_id || 'Local Guide'}</span>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Tour Details */}
-          <div className="lg:col-span-2">
-            {/* Title and Basic Info */}
-            <div className="mb-6">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">{service.title}</h1>
-              <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full mb-4">
-                {service.category}
-              </span>
-              
-              <div className="flex items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-700">{service.city}, {service.province}</span>
+        {/* Main Content Grid - Images/Content on Left, Booking Card on Right */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Left Column - Images and Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Hero Image Grid */}
+            {service.images && service.images.length > 0 ? (
+              <div className="grid grid-cols-4 gap-2 h-[400px]">
+                {/* Main large image */}
+                <div className="col-span-3 row-span-2 relative">
+                  <img 
+                    src={service.images[0]} 
+                    alt={service.title}
+                    className="w-full h-full object-cover rounded-l-lg cursor-pointer hover:opacity-90 transition"
+                    onError={(e) => {
+                      console.error('Image failed to load:', service.images[0]);
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80';
+                    }}
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-700">{service.duration} {service.duration_type}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-700">Max {service.max_group_size} guests</span>
+                
+                {/* Small images on the right */}
+                {service.images.slice(1, 3).map((image, index) => (
+                  <div key={index} className={`col-span-1 relative ${index === 1 ? 'rounded-tr-lg overflow-hidden' : ''}`}>
+                    <img 
+                      src={image} 
+                      alt={`${service.title} ${index + 2}`}
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80';
+                      }}
+                    />
+                  </div>
+                ))}
+                
+                {/* View all photos button overlay */}
+                <div className="col-span-1 relative rounded-br-lg overflow-hidden">
+                  {service.images[3] ? (
+                    <img 
+                      src={service.images[3]} 
+                      alt={`${service.title} 4`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200"></div>
+                  )}
+                  <button className="absolute inset-0 bg-black/50 hover:bg-black/60 transition flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-semibold">View all</span>
+                    </div>
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="w-full h-96 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <ImageIcon className="w-16 h-16 text-orange-400 mx-auto mb-2" />
+                  <p className="text-orange-600 font-medium">No image available</p>
+                </div>
+              </div>
+            )}
+
+            {/* Booking Options - Appears when date is selected */}
+            {selectedDate && (
+              <div className="mb-8 animate-fadeIn">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose from available options</h2>
+                
+                <div className="border-2 border-blue-500 rounded-lg overflow-hidden">
+                  <div className="bg-white">
+                    <button className="w-full p-6 text-left hover:bg-gray-50 transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900 text-lg flex-1 pr-4">
+                          {service.title}
+                        </h3>
+                        <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0 transform rotate-180" />
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{service.duration} {service.duration_type}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          <span>Guide: English</span>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-3">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span className="underline cursor-pointer hover:text-gray-900">View pickup area</span>
+                        </div>
+                        <p className="ml-6 text-xs text-gray-500 mt-1">
+                          Check to see if your accommodation is within the eligible area for pickup.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                        <Users className="w-4 h-4" />
+                        <span>Small group</span>
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-4">
+                        Limited to {service.max_group_size} participants
+                      </div>
+                    </button>
+
+                    {/* Time Slots Section */}
+                    <div className="px-6 pb-6 border-t border-gray-200 pt-6">
+                      <h4 className="font-semibold text-gray-900 mb-3">Select a starting time</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                      
+                      {service.time_slots && service.time_slots.length > 0 ? (
+                        <div className="flex gap-3 mb-4">
+                          {service.time_slots.map((slot, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedTimeSlot(`${slot.start}`)}
+                              className={`px-6 py-2 rounded-full border-2 text-sm font-medium transition ${
+                                selectedTimeSlot === `${slot.start}`
+                                  ? 'border-gray-900 bg-gray-900 text-white'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {slot.start}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex gap-3 mb-4">
+                          <button
+                            onClick={() => setSelectedTimeSlot('7:30 AM')}
+                            className={`px-6 py-2 rounded-full border-2 text-sm font-medium transition ${
+                              selectedTimeSlot === '7:30 AM'
+                                ? 'border-gray-900 bg-gray-900 text-white'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            }`}
+                          >
+                            7:30 AM
+                          </button>
+                          <button
+                            onClick={() => setSelectedTimeSlot('7:45 AM')}
+                            className={`px-6 py-2 rounded-full border-2 text-sm font-medium transition ${
+                              selectedTimeSlot === '7:45 AM'
+                                ? 'border-gray-900 bg-gray-900 text-white'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            }`}
+                          >
+                            7:45 AM
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Price and Booking Info */}
+                      <div className="mb-4">
+                        <div className="text-3xl font-bold text-gray-900 mb-1">
+                          ${(service.adult_price * adults + (service.child_price || 0) * children).toFixed(2)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {adults} Adult{adults > 1 ? 's' : ''} x ${service.adult_price.toFixed(2)}
+                          {children > 0 && `, ${children} Child${children > 1 ? 'ren' : ''} x $${service.child_price?.toFixed(2)}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          All taxes and fees included
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleBooking}
+                          disabled={isBooking || !selectedTimeSlot}
+                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          {isBooking ? 'Processing...' : 'Book now'}
+                        </button>
+                        <button
+                          onClick={handleAddToCart}
+                          disabled={!selectedTimeSlot}
+                          className="flex-1 py-3 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold transition disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                          Add to cart
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* About */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">About this experience</h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{service.description}</p>
+            </div>
+
+            {/* About this activity */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">About this activity</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Free cancellation</p>
+                    <p className="text-gray-600">Cancel up to 24 hours in advance for a full refund</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Reserve now & pay later</p>
+                    <p className="text-gray-600">Keep your travel plans flexible — book your spot and pay nothing today.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Duration {service.duration} {service.duration_type}</p>
+                    <p className="text-gray-600">Check availability to see starting times.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Driver</p>
+                    <p className="text-gray-600">English</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Pickup included</p>
+                    <p className="text-gray-600">Please wait in the hotel lobby from 10 minutes before your scheduled pickup time.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Small group</p>
+                    <p className="text-gray-600">Limited to {service.max_group_size} participants</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Highlighted Reviews */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Highlighted reviews from other travelers</h2>
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                    <span className="ml-2 font-semibold">5</span>
+                  </div>
+                  <p className="text-gray-700 mb-2">
+                    "Absolutely incredible experience! Our guide was knowledgeable and the views from the top were breathtaking. Highly recommend!"
+                  </p>
+                  <p className="text-sm text-gray-500">Emily Chen • November 2024</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                    <span className="ml-2 font-semibold">5</span>
+                  </div>
+                  <p className="text-gray-700 mb-2">
+                    "Perfect day trip! Well organized and our guide made the history come alive. A must-do in Sri Lanka!"
+                  </p>
+                  <p className="text-sm text-gray-500">Sophie Anderson • October 2024</p>
+                </div>
+              </div>
             </div>
 
             {/* What's Included */}
@@ -408,49 +723,6 @@ const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
                 </div>
               </div>
             </div>
-
-            {/* Available Time Slots */}
-            {service.time_slots && service.time_slots.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Available Time Slots</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {service.time_slots.map((slot, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedTimeSlot(`${slot.start} - ${slot.end}`)}
-                      className={`px-4 py-3 rounded-lg border-2 transition ${
-                        selectedTimeSlot === `${slot.start} - ${slot.end}`
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-500 hover:border-gray-600 text-gray-700'
-                      }`}
-                    >
-                      {slot.start} - {slot.end}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Image Gallery */}
-            {service.images && service.images.length > 1 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Gallery</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {service.images.slice(1).map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`${service.title} ${index + 2}`}
-                      className="w-full h-48 object-cover rounded-lg"
-                      onError={(e) => {
-                        console.error('Gallery image failed to load:', image);
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80';
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Reviews - Coming Soon */}
             {/* TODO: Implement reviews table and fetch reviews
@@ -481,142 +753,96 @@ const TourDetails: React.FC<TourDetailsProps> = ({ tourId, onBack }) => {
             */}
           </div>
 
-          {/* Right Column - Booking Card */}
+          {/* Right Column - STICKY Booking Card */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 sticky top-24">
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">${service.adult_price}</span>
-                  <span className="text-gray-600">per adult</span>
+            <div className="sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto">
+              {/* Booking Card */}
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-6">
+                {/* Price Header */}
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-3xl font-bold text-gray-900">${service.adult_price}</span>
+                    <span className="text-gray-600">per adult</span>
+                  </div>
+                  {service.child_price && service.child_price > 0 && (
+                    <p className="text-sm text-gray-600">${service.child_price} per child</p>
+                  )}
                 </div>
-                {service.child_price && service.child_price > 0 && (
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-2xl font-semibold text-gray-700">${service.child_price}</span>
-                    <span className="text-gray-500 text-sm">per child</span>
+
+                {/* Date Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    min={service.available_dates && service.available_dates.length > 0 ? service.available_dates[0] : new Date().toISOString().split('T')[0]}
+                    max={service.available_dates && service.available_dates.length > 0 ? service.available_dates[service.available_dates.length - 1] : ''}
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setShowBookingOptions(true);
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  />
+                </div>
+
+                {/* Guest Selection - Always visible with side-by-side layout */}
+                <div className="mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Adults */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Adults
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max={service.max_group_size - children}
+                        value={adults}
+                        onChange={(e) => setAdults(Math.max(1, Math.min(service.max_group_size - children, parseInt(e.target.value) || 1)))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-center"
+                      />
+                    </div>
+
+                    {/* Children */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Children
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={service.max_group_size - adults}
+                        value={children}
+                        onChange={(e) => setChildren(Math.max(0, Math.min(service.max_group_size - adults, parseInt(e.target.value) || 0)))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-center"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Group size info */}
+                  <div className="mt-3 p-3 bg-orange-50 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      Maximum group size: <span className="font-semibold">{service.max_group_size} people</span>
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      Current selection: <span className="font-semibold">{adults + children} people</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Show free cancellation info when date selected */}
+                {selectedDate && (
+                  <div className="animate-fadeIn">
+                    {/* Free Cancellation */}
+                    <div className="text-center text-sm text-gray-600 pt-4 border-t border-gray-200">
+                      <p className="font-medium text-green-600 mb-1">Free cancellation</p>
+                      <p>Cancel up to 24 hours in advance for a full refund</p>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Date Selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-900 mb-2">Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={service.available_dates?.[0] || new Date().toISOString().split('T')[0]}
-                    max={service.available_dates?.[service.available_dates.length - 1] || ''}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
-                  />
-                </div>
-              </div>
-
-              {/* Guests */}
-              <div className="mb-4 grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Adults</label>
-                  <div className="flex items-center border border-gray-300 rounded-lg">
-                    <button 
-                      onClick={() => setAdults(Math.max(1, adults - 1))}
-                      className="p-2 hover:bg-gray-50 transition"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <input 
-                      type="number" 
-                      value={adults}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 1;
-                        setAdults(Math.max(1, Math.min(service.max_group_size - children, value)));
-                      }}
-                      min="1"
-                      max={service.max_group_size - children}
-                      className="flex-1 text-center border-0 focus:outline-none text-black"
-                    />
-                    <button 
-                      onClick={() => setAdults(Math.min(service.max_group_size - children, adults + 1))}
-                      className="p-2 hover:bg-gray-50 transition"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Children</label>
-                  <div className="flex items-center border border-gray-300 rounded-lg">
-                    <button 
-                      onClick={() => setChildren(Math.max(0, children - 1))}
-                      className="p-2 hover:bg-gray-50 transition"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <input 
-                      type="number" 
-                      value={children}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setChildren(Math.max(0, Math.min(service.max_group_size - adults, value)));
-                      }}
-                      min="0"
-                      max={service.max_group_size - adults}
-                      className="flex-1 text-center border-0 focus:outline-none text-black"
-                    />
-                    <button 
-                      onClick={() => setChildren(Math.min(service.max_group_size - adults, children + 1))}
-                      className="p-2 hover:bg-gray-50 transition"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Group Size Info */}
-              <div className="mb-4 text-sm text-gray-600 bg-orange-50 p-3 rounded-lg">
-                <p>Maximum group size: {service.max_group_size} people</p>
-                <p className="mt-1">Current selection: {adults + children} people</p>
-              </div>
-
-              {/* Add-ons - Optional, can be removed or customized */}
-              <div className="mb-6 space-y-3">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-gray-700">Private guide (+$50)</span>
-                  <input
-                    type="checkbox"
-                    checked={privateGuide}
-                    onChange={(e) => setPrivateGuide(e.target.checked)}
-                    className="w-5 h-5 text-orange-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-gray-700">Professional photography (+$30)</span>
-                  <input
-                    type="checkbox"
-                    checked={professionalPhoto}
-                    onChange={(e) => setProfessionalPhoto(e.target.checked)}
-                    className="w-5 h-5 text-orange-500"
-                  />
-                </label>
-              </div>
-
-              {/* Total */}
-              <div className="mb-6 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-gray-900">Total</span>
-                  <span className="text-3xl font-bold text-orange-600">${calculateTotal()}</span>
-                </div>
-              </div>
-
-              {/* Book Button */}
-              <button 
-                onClick={handleBooking}
-                disabled={isBooking || !selectedDate}
-                className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isBooking ? 'Processing...' : 'Book Now'}
-              </button>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Mountain, Building2, Camera, Users, Umbrella, Compass } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 
 interface TravelInterestsSelectorProps {
@@ -10,6 +11,7 @@ interface TravelInterestsSelectorProps {
 
 const TravelInterestsSelector: React.FC<TravelInterestsSelectorProps> = ({ onContinue }) => {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const router = useRouter();
 
   const interests = [
     { id: 'adventure', label: 'Adventure', icon: Mountain },
@@ -32,6 +34,8 @@ const TravelInterestsSelector: React.FC<TravelInterestsSelectorProps> = ({ onCon
     if (onContinue) {
       onContinue(selectedInterests);
     }
+    // Navigate to user-home page
+    router.push('/user-home');
   };
 
   return (
